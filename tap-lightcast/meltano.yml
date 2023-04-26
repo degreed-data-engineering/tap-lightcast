@@ -11,9 +11,8 @@ plugins:
     - catalog
     - discover
     config:
-      a: a
-      b: b
-      c: c
+      client_id: CLIENT-ID
+      client_secret: CLIENT-SECRET
   loaders:
   - name: target-jsonl
     variant: andyh1203
