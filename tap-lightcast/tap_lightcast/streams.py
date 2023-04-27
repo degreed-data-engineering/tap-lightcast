@@ -1,17 +1,12 @@
 """Stream class for tap-lightcast."""
 
 import logging
-from typing import cast, Dict, Optional, Any, Iterable
-from pathlib import Path
-from urllib.parse import parse_qsl
+from typing import Dict, Optional, Any
 from singer_sdk import typing as th
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import APIAuthenticatorBase, OAuthAuthenticator
-from singer_sdk.pagination import BaseHATEOASPaginator
 
 logging.basicConfig(level=logging.INFO)
-
-SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
 
 class LightcastOAuthAuthenticator(OAuthAuthenticator):
@@ -27,41 +22,10 @@ class LightcastOAuthAuthenticator(OAuthAuthenticator):
         }
 
 
-# class CustomHATEOASPaginator(BaseHATEOASPaginator):
-#     """
-#     Link 1: https://sdk.meltano.com/en/latest/classes/singer_sdk.pagination.BaseHATEOASPaginator.html
-#     Link 2: https://sdk.meltano.com/en/latest/guides/pagination-classes.html#example-hateoas-pagination-a-k-a-next-links
-#     """
-
-# def get_next_url(self, response):
-#     data = response.json()
-#     _links = data.get("_links")
-#     if "next" in _links:
-#         next = _links["next"]["href"]
-#     else:
-#         next = None
-#     return next
-
-
 class TapLightcastStream(RESTStream):
-    """Lightcast stream class."""
+    """Generic Lightcast stream class."""
 
-    url_base = "https://emsiservices.com/skills/versions"
-
-    # def get_new_paginator(self):
-    #     return CustomHATEOASPaginator()
-
-    # def get_url_params(
-    #     self, context: Optional[dict], next_page_token: Optional[Any]
-    # ) -> Dict[str, Any]:
-    #     """Return a dictionary of values to be used in URL parameterization."""
-    #     params = {}
-    #     params.update({"psize": self.config["page_size"]})
-    #     params.update({"activeOnly": self.config["active_only"]})
-    #     params.update({"language": self.config["language"]})
-    #     if next_page_token:
-    #         params.update(parse_qsl(next_page_token.query))
-    #     return params
+    url_base = "https://emsiservices.com/skills"
 
     @property
     def authenticator(self) -> APIAuthenticatorBase:
@@ -71,21 +35,79 @@ class TapLightcastStream(RESTStream):
         )
 
 
-class Skills(TapLightcastStream):
-    name = "skills"  # Stream name
-    # path = "/latest"  # API endpoint after base_url
-    # primary_keys = ["id"]
-    # records_jsonpath = "$.items[*]"  # https://jsonpath.com Use requests response json to identify the json path
+class SkillsListStream(RESTStream):
+    """Specific Lightcast stream class for Skills List GET call that contains a parameter (limit)."""
 
-    # schema = th.PropertiesList(
-    #     th.Property("author", th.StringType),
-    #     th.Property("channels", th.StringType),
-    #     th.Property("coverUrl", th.StringType),
-    #     th.Property("duration", th.StringType),
-    #     th.Property("id", th.IntegerType),
-    #     th.Property("introHtml", th.StringType),
-    #     th.Property("source", th.ObjectType(th.Property("pages", th.IntegerType))),
-    #     th.Property("title", th.StringType),
-    #     th.Property("type", th.StringType),
-    #     th.Property("url", th.StringType),
-    # ).to_dict()
+    url_base = "https://emsiservices.com/skills"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        """Return a dictionary of values to be used in URL parameterization."""
+        params = {}
+        if self.config["limit"] == -1:
+            params.update({"fields": "id"})
+        else:
+            params.update({"limit": self.config["limit"], "fields": "id"})
+        return params
+
+    @property
+    def authenticator(self) -> APIAuthenticatorBase:
+        return LightcastOAuthAuthenticator(
+            stream=self,
+            auth_endpoint=f"https://auth.emsicloud.com/connect/token",
+        )
+
+
+class SkillsLatestVersion(TapLightcastStream):
+    name = "skills_latest_version"  # Stream name
+    path = "/meta"  # API endpoint after base_url
+    primary_keys = ["latestVersion"]
+    records_jsonpath = "$.data"  # https://jsonpath.com Use requests response json to identify the json path
+
+    schema = th.PropertiesList(th.Property("latestVersion", th.StringType)).to_dict()
+
+    # https://sdk.meltano.com/en/latest/parent_streams.html
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Return a context dictionary for child streams."""
+        global latestVersion
+        latestVersion = record["latestVersion"]
+        return {"latestVersion": latestVersion}
+
+
+class SkillsList(SkillsListStream):
+    name = "skills_list"  # Stream name
+    parent_stream_type = SkillsLatestVersion
+    path = "/versions/{latestVersion}/skills"  # API endpoint after base_url
+    primary_keys = ["id"]
+    records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
+
+    schema = th.PropertiesList(th.Property("id", th.StringType)).to_dict()
+
+    # https://sdk.meltano.com/en/latest/parent_streams.html
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Return a context dictionary for child streams."""
+        return {"latestVersion": latestVersion, "id": record["id"]}
+
+
+class SkillsDetails(TapLightcastStream):
+    name = "skills_details"  # Stream name
+    parent_stream_type = SkillsList
+    path = "/versions/{latestVersion}/skills/{id}"  # API endpoint after base_url
+    primary_keys = ["id"]
+    records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
+
+    schema = th.PropertiesList(
+        th.Property("id", th.StringType),
+        th.Property("name", th.StringType),
+        th.Property("type", th.ObjectType(th.Property("id", th.StringType))),
+        th.Property("type", th.ObjectType(th.Property("name", th.StringType))),
+        th.Property("category", th.ObjectType(th.Property("id", th.IntegerType))),
+        th.Property("category", th.ObjectType(th.Property("name", th.StringType))),
+        th.Property("subcategory", th.ObjectType(th.Property("id", th.IntegerType))),
+        th.Property("subcategory", th.ObjectType(th.Property("name", th.StringType))),
+        th.Property("isLanguage", th.BooleanType),
+        th.Property("isSoftware", th.BooleanType),
+        th.Property("description", th.StringType),
+        th.Property("descriptionSource", th.StringType),
+    ).to_dict()
