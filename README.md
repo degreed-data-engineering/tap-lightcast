@@ -13,7 +13,7 @@ This tap lightcast was created by Degreed to be used for extracting data via Mel
             "limit",
             th.IntegerType,
             required=True,
-            description="Used for debugging purposes. It limits the number of IDs to select. Set this parameter to -1 to get all available IDs.",
+            description="Used for debugging purposes. It limits the number of IDs to select.",
         ),
     ).to_dict()
 ```

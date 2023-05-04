@@ -44,11 +44,9 @@ class SkillsListStream(RESTStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization."""
-        params = {}
-        if self.config["limit"] == -1:
-            params.update({"fields": "id"})
-        else:
-            params.update({"limit": self.config["limit"], "fields": "id"})
+        params = {"fields": "id"}
+        if "limit" in self.config:
+            params.update({"limit": self.config["limit"]})
         return params
 
     @property

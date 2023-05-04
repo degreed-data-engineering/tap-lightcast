@@ -31,8 +31,8 @@ class TapLightcast(Tap):
         th.Property(
             "limit",
             th.IntegerType,
-            required=True,
-            description="Used for debugging purposes. It limits the number of IDs to select. Set this parameter to -1 to get all available IDs.",
+            required=False,
+            description="Used for debugging purposes. It limits the number of IDs to select.",
         ),
     ).to_dict()
 

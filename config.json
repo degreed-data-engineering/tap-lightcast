@@ -1,5 +1,4 @@
 {
     "client_id": "",
-    "client_secret": "",
-    "limit": -1 /* set to -1 only if no IDs limit is required */
+    "client_secret": ""
 }
