@@ -1,0 +1,30 @@
+{
+    "singer_state": {
+        "currently_syncing": null,
+        "bookmarks": {
+            "skills_latest_version": {
+                "replication_key": "latestVersion",
+                "replication_key_value": "8.31"
+            },
+            "skills_list": {
+                "partitions": [
+                    {
+                        "context": {
+                            "latestVersion": "8.31"
+                        }
+                    }
+                ]
+            },
+            "skills_details": {
+                "partitions": [
+                    {
+                        "context": {
+                            "latestVersion": "8.31",
+                            "id": "KS126XS6CQCFGC3NG79X"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

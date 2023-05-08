@@ -41,12 +41,12 @@ class SkillsLatestVersion(TapLightcastStream):
     def __init__(self, tap: Tap):
         super().__init__(tap)
         self.logger = logging.getLogger(__name__)
-
         self.replication_key_value = ""
 
     name = "skills_latest_version"  # Stream name
     path = "/meta"  # API endpoint after base_url
     primary_keys = ["latestVersion"]
+    replication_key = "latestVersion"
     records_jsonpath = "$.data"  # https://jsonpath.com Use requests response json to identify the json path
 
     schema = th.PropertiesList(th.Property("latestVersion", th.StringType)).to_dict()
@@ -54,22 +54,17 @@ class SkillsLatestVersion(TapLightcastStream):
     # https://sdk.meltano.com/en/latest/parent_streams.html
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Return a context dictionary for child streams."""
+        logging.warn(str(self.stream_state))
+        latestVersion = record["latestVersion"]
+        stopTap = False
+        replication_key_value = self.stream_state["replication_key_value"]
+        logging.info("latestVersion: " + str(latestVersion))
+        logging.info("replication_key_value: " + str(replication_key_value))
+        logging.warn(str(self.stream_state))
+        if latestVersion == replication_key_value:
+            stopTap = True
 
-        def getLatestVersion(self, record: dict, context: Optional[dict]):
-            latestVersion = record["latestVersion"]
-            replication_key_value = str(
-                self.get_starting_replication_key_value(context)
-            )
-            if latestVersion != replication_key_value:
-                logging.info("latestVersion: " + str(latestVersion))
-                logging.info("replication_key_value: " + str(replication_key_value))
-                self.replication_key_value = latestVersion
-                return latestVersion
-            else:
-                return None
-
-        latestVersion = getLatestVersion(self, record, context)
-        return {"latestVersion": latestVersion}
+        return {"latestVersion": latestVersion, "stopTap": stopTap}
 
 
 class SkillsList(TapLightcastStream):
@@ -86,6 +81,8 @@ class SkillsList(TapLightcastStream):
         params = {"fields": "id"}
         if "limit" in self.config:
             params.update({"limit": self.config["limit"]})
+        if context["stopTap"] == True:
+            params.update({"q": ""})
         return params
 
     schema = th.PropertiesList(th.Property("id", th.StringType)).to_dict()
