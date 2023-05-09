@@ -4,11 +4,13 @@ import logging
 import requests
 from typing import Dict, Optional, Any
 from singer_sdk import typing as th
-from singer_sdk import Tap
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import APIAuthenticatorBase, OAuthAuthenticator
 
 logging.basicConfig(level=logging.INFO)
+
+url_base = f"https://emsiservices.com/skills"
+auth_endpoint = f"https://auth.emsicloud.com/connect/token"
 
 
 class LightcastOAuthAuthenticator(OAuthAuthenticator):
@@ -27,50 +29,41 @@ class LightcastOAuthAuthenticator(OAuthAuthenticator):
 class TapLightcastStream(RESTStream):
     """Generic Lightcast stream class."""
 
-    url_base = "https://emsiservices.com/skills"
+    @property
+    def url_base(self) -> str:
+        """Base URL of source"""
+        return url_base
 
     @property
     def authenticator(self) -> APIAuthenticatorBase:
         return LightcastOAuthAuthenticator(
             stream=self,
-            auth_endpoint=f"https://auth.emsicloud.com/connect/token",
+            auth_endpoint=auth_endpoint,
         )
 
 
-class SkillsLatestVersion(TapLightcastStream):
-    def __init__(self, tap: Tap):
-        super().__init__(tap)
-        self.logger = logging.getLogger(__name__)
-        self.replication_key_value = ""
-
-    name = "skills_latest_version"  # Stream name
-    path = "/meta"  # API endpoint after base_url
-    primary_keys = ["latestVersion"]
-    replication_key = "latestVersion"
-    records_jsonpath = "$.data"  # https://jsonpath.com Use requests response json to identify the json path
-
-    schema = th.PropertiesList(th.Property("latestVersion", th.StringType)).to_dict()
-
-    # https://sdk.meltano.com/en/latest/parent_streams.html
-    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
-        """Return a context dictionary for child streams."""
-        logging.warn(str(self.stream_state))
-        latestVersion = record["latestVersion"]
-        stopTap = False
-        replication_key_value = self.stream_state["replication_key_value"]
-        logging.info("latestVersion: " + str(latestVersion))
-        logging.info("replication_key_value: " + str(replication_key_value))
-        logging.warn(str(self.stream_state))
-        if latestVersion == replication_key_value:
-            stopTap = True
-
-        return {"latestVersion": latestVersion, "stopTap": stopTap}
-
-
 class SkillsList(TapLightcastStream):
+
+    client_id = self.config["client_id"]
+    client_secret = self.config["client_secret"]
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "client_credentials",
+        "scope": "emsi_open",
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    response = requests.request("POST", url=auth_endpoint, data=data, headers=headers)
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": "Bearer {}".format(access_token)}
+    url = url_base + "/meta"
+    response = requests.request("GET", url=url, headers=headers)
+    latestVersion = response.json()["data"]["latestVersion"]
+
     name = "skills_list"  # Stream name
-    parent_stream_type = SkillsLatestVersion
-    path = "/versions/{latestVersion}/skills"  # API endpoint after base_url
+    path = "/versions/{latestVersion}/skills".format(
+        latestVersion=latestVersion
+    )  # API endpoint after base_url
     primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
 
@@ -81,8 +74,8 @@ class SkillsList(TapLightcastStream):
         params = {"fields": "id"}
         if "limit" in self.config:
             params.update({"limit": self.config["limit"]})
-        if context["stopTap"] == True:
-            params.update({"q": ""})
+        # if context["stopTap"] == True:
+        #     params.update({"q": ""})
         return params
 
     schema = th.PropertiesList(th.Property("id", th.StringType)).to_dict()
@@ -90,7 +83,7 @@ class SkillsList(TapLightcastStream):
     # https://sdk.meltano.com/en/latest/parent_streams.html
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Return a context dictionary for child streams."""
-        return {"latestVersion": context["latestVersion"], "id": record["id"]}
+        return {"latestVersion": self.latestVersion, "id": record["id"]}
 
 
 class SkillsDetails(TapLightcastStream):

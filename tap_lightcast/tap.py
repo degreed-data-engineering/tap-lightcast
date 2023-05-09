@@ -5,7 +5,6 @@ from singer_sdk import Tap, Stream
 from singer_sdk import typing as th
 
 from tap_lightcast.streams import (
-    SkillsLatestVersion,
     SkillsList,
     SkillsDetails,
 )
@@ -13,7 +12,6 @@ from tap_lightcast.streams import (
 PLUGIN_NAME = "tap-lightcast"
 
 STREAM_TYPES = [
-    SkillsLatestVersion,
     SkillsList,
     SkillsDetails,
 ]
