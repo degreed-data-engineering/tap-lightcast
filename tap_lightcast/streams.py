@@ -11,6 +11,8 @@ logging.basicConfig(level=logging.INFO)
 
 url_base = f"https://emsiservices.com/skills"
 auth_endpoint = f"https://auth.emsicloud.com/connect/token"
+latestVersion = ""
+path = ""
 
 
 class LightcastOAuthAuthenticator(OAuthAuthenticator):
@@ -41,29 +43,36 @@ class TapLightcastStream(RESTStream):
             auth_endpoint=auth_endpoint,
         )
 
+    @property
+    def path(self) -> str:
+        global latestVersion
+        global path
+        client_id = self.config["client_id"]
+        client_secret = self.config["client_secret"]
+        data = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "client_credentials",
+            "scope": "emsi_open",
+        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        response = requests.request(
+            "POST", url=auth_endpoint, data=data, headers=headers
+        )
+        access_token = response.json()["access_token"]
+        headers = {"Authorization": "Bearer {}".format(access_token)}
+        url = url_base + "/meta"
+        response = requests.request("GET", url=url, headers=headers)
+        latestVersion = response.json()["data"]["latestVersion"]
+        path = f"/versions/{latestVersion}/skills".format(
+            latestVersion=latestVersion
+        )  # API endpoint after base_url
+
 
 class SkillsList(TapLightcastStream):
 
-    client_id = self.config["client_id"]
-    client_secret = self.config["client_secret"]
-    data = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "grant_type": "client_credentials",
-        "scope": "emsi_open",
-    }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    response = requests.request("POST", url=auth_endpoint, data=data, headers=headers)
-    access_token = response.json()["access_token"]
-    headers = {"Authorization": "Bearer {}".format(access_token)}
-    url = url_base + "/meta"
-    response = requests.request("GET", url=url, headers=headers)
-    latestVersion = response.json()["data"]["latestVersion"]
-
+    logging.warn("SKILLS LIST")
     name = "skills_list"  # Stream name
-    path = "/versions/{latestVersion}/skills".format(
-        latestVersion=latestVersion
-    )  # API endpoint after base_url
     primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
 
@@ -87,6 +96,8 @@ class SkillsList(TapLightcastStream):
 
 
 class SkillsDetails(TapLightcastStream):
+
+    logging.warn("SKILLS DETAILS")
     name = "skills_details"  # Stream name
     parent_stream_type = SkillsList
     path = "/versions/{latestVersion}/skills/{id}"  # API endpoint after base_url
