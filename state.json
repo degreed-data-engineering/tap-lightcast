@@ -15,7 +15,9 @@
                         "context": {
                             "latestVersion": "8.32",
                             "id": "KS126XS6CQCFGC3NG79X"
-                        }
+                        },
+                        "replication_key": "latestVersion",
+                        "replication_key_value": "8.32"
                     }
                 ]
             }
