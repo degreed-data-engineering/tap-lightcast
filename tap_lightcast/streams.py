@@ -95,8 +95,9 @@ class SkillsList(TapLightcastStream):
         th.Property("id", th.StringType), th.Property("latestVersion", th.StringType)
     ).to_dict()
 
+    
     def prepare_request(
-        self, context: Optional[dict] | None, next_page_token: Optional[Any] | None
+        self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> requests.PreparedRequest:
         logging.warn("##########" + str(self.stream_state))
         http_method = self.rest_method
