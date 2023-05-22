@@ -2,11 +2,12 @@
 
 import logging
 import requests
+
 from typing import Dict, Optional, Any
 from singer_sdk import typing as th
-from singer_sdk import Tap
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import APIAuthenticatorBase, OAuthAuthenticator
+from singer_sdk import Tap
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,7 +34,6 @@ class TapLightcastStream(RESTStream):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        logging.info("Parse Lightcast latest version")
         # Create new token
         data = {
             "client_id": self.config["client_id"],
@@ -51,21 +51,6 @@ class TapLightcastStream(RESTStream):
         url = url_base + "/meta"
         response = requests.request("GET", url=url, headers=headers)
         self.latestVersion = response.json()["data"]["latestVersion"]
-        # if "replication_key_value" in self.stream_state:
-        #     logging.warn(
-        #         "################## replication_key_value already in stream_state"
-        #     )
-        #     logging.warn(str(self.stream_state))
-        #     self.replication_key = self.stream_state["replication_key"]
-        #     self.replication_key_value = self.stream_state["replication_key_value"]
-        # else:
-        #     logging.warn("################## no replication_key_value in stream_state")
-        #     logging.warn(str(self.stream_state))
-        #     self.stream_state["replication_key"] = "latestVersion"
-        #     self.stream_state["replication_key_value"] = self.latestVersion
-        #     self.replication_key = "latestVersion"
-        #     self.replication_key_value = ""
-        #     logging.warn(self.stream_state)
 
     @property
     def url_base(self) -> str:
@@ -81,47 +66,45 @@ class TapLightcastStream(RESTStream):
 
 
 class SkillsList(TapLightcastStream):
-    # def __init__(self, tap: Tap):
-    #     super().__init__(tap)
-    #     self.logger = logging.getLogger(__name__)
+    def __init__(self, tap: Tap):
+        super().__init__(tap)
+        self.logger = logging.getLogger(__name__)
 
     name = "skills_list"  # Stream name
     primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
-    path = ""
+
+    @property
+    def path(self) -> str:
+        path = f"/versions/{self.latestVersion}/skills"
+        return path
+
     replication_key = "latestVersion"
 
     schema = th.PropertiesList(
         th.Property("id", th.StringType), th.Property("latestVersion", th.StringType)
     ).to_dict()
 
-    def prepare_request(
-        self, context: Optional[dict] | None, next_page_token: Optional[Any] | None
-    ) -> requests.PreparedRequest:
-        logging.warn("##########" + str(self.stream_state))
-        http_method = self.rest_method
-        url: str = "{url_base}/versions/{latestVersion}/skills".format(
-            url_base=url_base, latestVersion=self.latestVersion
-        )
-        params = {"fields": "id"}
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        """Return a dictionary of values to be used in URL parameterization."""
+        params: dict = {"fields": "id"}
         if "limit" in self.config:
             params.update({"limit": self.config["limit"]})
+
+        logging.warn("#####################")
+        logging.warn(self.stream_state)
+        logging.warn("#####################")
         # if "replication_key_value" in self.stream_state:
         #     if self.stream_state["replication_key_value"] == self.latestVersion:
         #         params.update({"q": ""})
-        headers = self.http_headers
-        return self.build_prepared_request(
-            method=http_method,
-            url=url,
-            params=params,
-            headers=headers,
-        )
+        return params
 
     def post_process(self, row: dict, context: Optional[dict]) -> dict:
         row["latestVersion"] = self.latestVersion
         return row
 
-    # https://sdk.meltano.com/en/latest/parent_streams.html
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Return a context dictionary for child streams."""
         return {"latestVersion": self.latestVersion, "id": record["id"]}
@@ -133,7 +116,6 @@ class SkillsDetails(TapLightcastStream):
     primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
     path = "/versions/{latestVersion}/skills/{id}"  # API endpoint after base_url
-
     schema = th.PropertiesList(
         th.Property("latestVersion", th.StringType),
         th.Property("id", th.StringType),
