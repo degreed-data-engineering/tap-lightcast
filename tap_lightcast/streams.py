@@ -7,7 +7,7 @@ from typing import Dict, Optional, Any
 from singer_sdk import typing as th
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import APIAuthenticatorBase, OAuthAuthenticator
-from singer_sdk import Tap
+from singer_sdk import Tap, Stream
 
 logging.basicConfig(level=logging.INFO)
 
@@ -73,13 +73,14 @@ class SkillsList(TapLightcastStream):
     name = "skills_list"  # Stream name
     primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
+    replication_key = "latestVersion"
 
     @property
     def path(self) -> str:
         path = f"/versions/{self.latestVersion}/skills"
         return path
 
-    replication_key = "latestVersion"
+    
 
     schema = th.PropertiesList(
         th.Property("id", th.StringType), th.Property("latestVersion", th.StringType)
@@ -88,6 +89,10 @@ class SkillsList(TapLightcastStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+
+        self.logger.info("##PR##")
+        self.logger.info(self.stream_state)
+        
         """Return a dictionary of values to be used in URL parameterization."""
         params: dict = {"fields": "id"}
         if "limit" in self.config:
