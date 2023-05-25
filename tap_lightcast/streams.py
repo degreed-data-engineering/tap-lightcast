@@ -71,7 +71,7 @@ class SkillsList(TapLightcastStream):
         self.logger = logging.getLogger(__name__)
 
     name = "skills_list"  # Stream name
-    primary_keys = ["id"]
+    # primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
     replication_key = "latestVersion"
 
@@ -91,8 +91,11 @@ class SkillsList(TapLightcastStream):
     ) -> Dict[str, Any]:
 
         self.logger.info("##PR##")
-        self.logger.info(self.stream_state["replication_key_value"])
         self.logger.info(self.stream_state)
+
+        self.stream_state["replication_key_value"] = 'test'
+        self.logger.info(self.stream_state)
+
         
         """Return a dictionary of values to be used in URL parameterization."""
         params: dict = {"fields": "id"}
