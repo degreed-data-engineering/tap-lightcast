@@ -109,6 +109,7 @@ class SkillsList(TapLightcastStream):
 
     def post_process(self, row: dict, context: Optional[dict]) -> dict:
         row["latestVersion"] = self.latestVersion
+        
         return row
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
