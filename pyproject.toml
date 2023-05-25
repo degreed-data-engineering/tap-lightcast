@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "tap-lightcast"
 version = "0.1.0"
-description = ""
+description = "`tap-lightcast` is Singer-compliant lightcast tap built with Singer SDK."
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 packages = [{include = "tap_lightcast"}]
-
+license = "Apache v2"
 
 [tool.poetry.dependencies]
 python = "<3.11,>=3.6.2"
@@ -28,7 +28,7 @@ viztracer = "^0.15.4"
 [tool.isort]
 profile = "black"
 multi_line_output = 3 # Vertical Hanging Indent
-src_paths = "tap_template"
+src_paths = "tap_lightcast"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
