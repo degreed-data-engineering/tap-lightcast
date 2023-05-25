@@ -71,7 +71,7 @@ class SkillsList(TapLightcastStream):
         self.logger = logging.getLogger(__name__)
 
     name = "skills_list"  # Stream name
-    # primary_keys = ["id"]
+    primary_keys = ["id"]
     records_jsonpath = "$.data[0:]"  # https://jsonpath.com Use requests response json to identify the json path
     replication_key = "latestVersion"
 
