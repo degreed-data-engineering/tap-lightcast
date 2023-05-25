@@ -91,6 +91,7 @@ class SkillsList(TapLightcastStream):
     ) -> Dict[str, Any]:
 
         self.logger.info("##PR##")
+        self.logger.info(self.stream_state["replication_key_value"])
         self.logger.info(self.stream_state)
         
         """Return a dictionary of values to be used in URL parameterization."""
@@ -98,9 +99,6 @@ class SkillsList(TapLightcastStream):
         if "limit" in self.config:
             params.update({"limit": self.config["limit"]})
 
-        logging.warn("#####################")
-        logging.warn(self.stream_state)
-        logging.warn("#####################")
         # if "replication_key_value" in self.stream_state:
         #     if self.stream_state["replication_key_value"] == self.latestVersion:
         #         params.update({"q": ""})
