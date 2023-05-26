@@ -1,26 +1,8 @@
 {
-    "singer_state": {
-        "currently_syncing": null,
-        "bookmarks": {
-            "skills_list": {
-                "replication_key": "latestVersion",
-                "replication_key_value": "8.32",
-                "starting_replication_value": "8.32"
-            },
-            "skills_details": {
-                "replication_key": "latestVersion",
-                "replication_key_value": "8.32",
-                "partitions": [
-                    {
-                        "context": {
-                            "latestVersion": "8.32",
-                            "id": "KS126XS6CQCFGC3NG79X"
-                        },
-                        "replication_key": "latestVersion",
-                        "replication_key_value": "8.32"
-                    }
-                ]
-            }
+    "bookmarks": {
+        "skills_list": {
+            "replication_key_value": "8.33",
+            "replication_key": "latestVersion"
         }
     }
 }
