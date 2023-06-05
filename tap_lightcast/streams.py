@@ -1,7 +1,9 @@
 """Stream class for tap-lightcast."""
 
 import logging
+import random
 import requests
+import time
 
 from typing import Dict, Optional, Any
 from singer_sdk import typing as th
@@ -32,6 +34,7 @@ class TapLightcastStream(RESTStream):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.counter = 0
 
         # Create new token
         data = {
@@ -99,6 +102,11 @@ class SkillsList(TapLightcastStream):
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Return a context dictionary for child streams."""
+        self.counter += 1
+        if self.counter % 100 == 0:
+            sleep_time = random.uniform(10, 15)
+            logging.info(f"Sleeping for {sleep_time} seconds")
+            time.sleep(sleep_time)
         return {"latestVersion": self.latestVersion, "id": record["id"]}
 
 
